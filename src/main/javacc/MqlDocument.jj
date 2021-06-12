@@ -1,19 +1,19 @@
 
-PARSER_BEGIN(Example1)
+PARSER_BEGIN(MqlDocument)
 
 /**
  * Simple brace matcher.
  */
-public class Example1 {
+public class MqlDocument {
   /** Main entry point. */
   public static void main(String args[]) throws ParseException {
-    Example1 parser = new Example1(System.in);
+    MqlDocument parser = new MqlDocument(System.in);
     parser.Input();
   }
 
 }
 
-PARSER_END(Example1)
+PARSER_END(MqlDocument)
 
 SKIP : {
 " "
@@ -49,72 +49,88 @@ MqlNode Statement() :
  MqlNode n;
 }
 {
-    "db." n=DbStatement()
+    "db." n=Db_Statement()
     {return n;}
 }
 
-String Name() :
-{
-    Token t;
-}
-{
-    t=<IDENTIFIER>{
-        return t.image;
-    }
-}
-
-MqlNode DbStatement():
+MqlNode Db_Statement():
 {
     MqlNode n;
     String name;
+    String source;
+    BsonDocument doc = null;
 }
 {
     (
         "createCollection("
-        name = Name() ")"
+        name = Literal() ")"
         {n = new MqlCreateCollection(name);}
 
     |
         "getCollection("
-        name = Name() ")"
+        name = Literal() ")"
         {n = new MqlSelectCollection(name);}
 
     |
-        n = CollectionStatement(null)
+        "createView("
+        name = Literal() "," source = Literal()
+        ("," doc=Document() )? ")"
+        {n = new MqlCreateView(name, source, doc);}
     |
-        name=Name() "." n=CollectionStatement(name)
+        n = Collection_Statement(null)
+    |
+        name=Literal() "." n=Collection_Statement(name)
 
     )
     {return n;}
 }
 
-MqlNode CollectionStatement(String collection):
+MqlNode Collection_Statement(String collection):
 {
     MqlNode n;
 }
 {
     (
-        n = FindStatement(collection)
+        n = Find_Statement(collection)
     |
-        n = InsertStatement(collection)
+        n = Insert_Statement(collection)
     |
-        n = CountStatement(collection)
+        n = Count_Statement(collection)
     |
-        n = AggregateStatement(collection)
+        n = Aggregate_Statement(collection)
     |
-        n = UpdateStatement(collection)
+        n = Update_Statement(collection)
     |
-        n = ReplaceStatement(collection)
+        n = Replace_Statement(collection)
     |
-        n = SaveStatement(collection)
+        n = Drop_Statement(collection)
     |
-        n = RemoveStatement(collection)
+        n = Delete_Statement(collection)
+    |
+        n = Save_Statement(collection)
+    |
+        n = Remove_Statement(collection)
     )
     {return n;}
 
 }
 
-MqlNode RemoveStatement(String collection):
+MqlNode Delete_Statement(String collection):
+{
+    BsonDocument doc;
+}
+{
+    "deleteMany(" doc=Document() ")"
+    { return new MqlDelete(collection, doc);}
+}
+
+MqlNode Drop_Statement(String collection): {}
+{
+    "drop()"
+    {return new MqlDrop(collection);}
+}
+
+MqlNode Remove_Statement(String collection):
 {
     BsonDocument doc;
 }
@@ -124,7 +140,7 @@ MqlNode RemoveStatement(String collection):
 }
 
 
-MqlNode SaveStatement(String collection):
+MqlNode Save_Statement(String collection):
 {
     BsonDocument doc;
 }
@@ -134,7 +150,7 @@ MqlNode SaveStatement(String collection):
 }
 
 
-MqlNode ReplaceStatement(String collection):
+MqlNode Replace_Statement(String collection):
 {
     BsonDocument doc;
 }
@@ -143,7 +159,7 @@ MqlNode ReplaceStatement(String collection):
     {return new MqlReplace(collection, doc);}
 }
 
-MqlNode UpdateStatement(String collection):
+MqlNode Update_Statement(String collection):
 {
     BsonDocument doc;
 }
@@ -152,7 +168,7 @@ MqlNode UpdateStatement(String collection):
     {return new MqlUpdate(collection, doc);}
 }
 
-MqlNode AggregateStatement(String collection):
+MqlNode Aggregate_Statement(String collection):
 {
     BsonDocument doc;
 }
@@ -161,7 +177,7 @@ MqlNode AggregateStatement(String collection):
     {return new MqlAggregate(collection, doc);}
 }
 
-MqlNode CountStatement(String collection):
+MqlNode Count_Statement(String collection):
 {
     BsonDocument doc;
 }
@@ -173,7 +189,7 @@ MqlNode CountStatement(String collection):
     {return new MqlCount(collection, doc);}
 }
 
-MqlNode FindStatement(String collection):
+MqlNode Find_Statement(String collection):
 {
     BsonDocument doc;
 }
@@ -182,7 +198,7 @@ MqlNode FindStatement(String collection):
     {return new MqlCollectionStatement(collection, doc);}
 }
 
-MqlNode InsertStatement(String collection):
+MqlNode Insert_Statement(String collection):
 {
     BsonDocument doc;
 }
